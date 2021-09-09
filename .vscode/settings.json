@@ -1,0 +1,12 @@
+{
+  "liveServer.settings.port": 5501,
+  "liveServer.settings.root": "/",
+  "liveServer.settings.CustomBrowser": "chrome",
+  "liveServer.settings.https": {
+    "enable": true,
+    "cert": "/Users/KNOWCK/Downloads/openssl-1.0.2j-fips-x86_64/OpenSSL/bin/my.crt",
+    "key": "/Users/KNOWCK/Downloads/openssl-1.0.2j-fips-x86_64/OpenSSL/bin/my.key",
+    "passphrase": "000000"
+  },
+  "cSpell.words": ["Fcts"]
+}
