@@ -1,8 +1,11 @@
+import { OrbitControls } from '../../../libs/three/jsm/OrbitControls.js';
+
+
 class App{
 	constructor(){
     /**
      * Three.js 환경 생성 */ 
-    // renderer : 나의 데이터를 실제로 그려주는 역할
+    // renderer : 나의 데이터를 실제로 그려주는 역할( 3d printer )
     const container = document.createElement( 'div' );
     document.body.appendChild( container );
     this.renderer = new THREE.WebGLRenderer({antialias: true, alpha: true})
@@ -13,14 +16,11 @@ class App{
     this.renderer.domElement.style.left = '0px'
     container.appendChild(this.renderer.domElement)
 
-    // camera : 시야각, 캔버스배율, 랜더링 공간설정
-		this.camera = new THREE.Camera();
-    
+    // camera : 시야각, 캔버스(랜더러)배율, 랜더링 공간설정 (원근 카메라 셋팅.)
+    this.camera = new THREE.Camera()
 
     // scene : 최상위 노드(객체)로서 배경색 안개등을 트리안의 모든 방향성은 scene으로 부터 결정된다.
     this.scene = new THREE.Scene() 
-    this.scene.add(this.camera)
-
 
 
     
@@ -54,8 +54,6 @@ class App{
         changeMatrixMode: 'cameraTransformMatrix',
       },
     )
-    // as we do changeMatrixMode: 'cameraTransformMatrix', start with invisible scene
-    this.scene.visible = false
 
 
     /**
@@ -66,12 +64,13 @@ class App{
     this.mesh.position.y = 1
     this.scene.add(this.mesh)
 
+    this.controls = new OrbitControls( this.camera, this.renderer.domElement );
+    this.controls.update()
 
     /**
      * render the whole thing on the page */
     this.renderer.setAnimationLoop(this.render.bind(this))
 
-    window.addEventListener('resize', this.resize.bind(this) );
 	}	
 
 
@@ -86,15 +85,15 @@ class App{
 
 
 
-	render() {   
-    this.renderer.render(this.scene, this.camera)
+	render() { 
     this.mesh.rotateX( 0.01 )
-
+    this.mesh.rotateY( 0.005 );
+    this.mesh.rotateZ( 0.0005 );
+    this.renderer.render(this.scene, this.camera)
+    
     if (this.arToolkitSource.ready === false) return
-    // 엔진이 계속 이미지영역을 계속 감지해야함.
     this.arToolkitContext.update(this.arToolkitSource.domElement)
-    // update scene.visible if the marker is seen
-    this.scene.visible = this.camera.visible
+    this.controls.update()
   }
 }
 
