@@ -1,4 +1,5 @@
-import { OrbitControls } from '../../../libs/three/jsm/OrbitControls.js';
+var colors = [0x05A8AA, 0xB8D5B8, 0xD7B49E, 0xDC602E, 0xBC412B, 0xF19C79, 0xCBDFBD, 0xF6F4D2, 0xD4E09B, 0xFFA8A9, 0xF786AA, 0xA14A76, 0xBC412B, 0x63A375, 0xD57A66, 0x731A33, 0xCBD2DC, 0xDBD48E, 0x5E5E5E, 0xDE89BE];
+
 
 
 class App{
@@ -11,9 +12,9 @@ class App{
     this.renderer = new THREE.WebGLRenderer({antialias: true, alpha: true})
     this.renderer.setPixelRatio(window.devicePixelRatio)
     this.renderer.setSize(window.innerHeight, window.innerWidth)
-    this.renderer.domElement.style.position = 'absolute'
-    this.renderer.domElement.style.top = '0px'
-    this.renderer.domElement.style.left = '0px'
+    this.renderer.outputEncoding = THREE.sRGBEncoding;
+    this.renderer.physicallyCorrectLights = true;
+
     container.appendChild(this.renderer.domElement)
 
     // camera : 시야각, 캔버스(랜더러)배율, 랜더링 공간설정 (원근 카메라 셋팅.)
@@ -54,22 +55,20 @@ class App{
         changeMatrixMode: 'cameraTransformMatrix',
       },
     )
+    
+    
+    //--------------------------------------------------------------------------------------------------------------------
+    
 
 
-    /**
-     * add an object in the scene */
-    const geometry = new THREE.TorusKnotGeometry(0.3, 0.1, 64, 16)
-    const material = new THREE.MeshNormalMaterial()
-    this.mesh = new THREE.Mesh(geometry, material)
-    this.mesh.position.y = 1
-    this.scene.add(this.mesh)
 
-    this.controls = new OrbitControls( this.camera, this.renderer.domElement );
-    this.controls.update()
-
+    
+    //--------------------------------------------------------------------------------------------------------------------
+    
+    
     /**
      * render the whole thing on the page */
-    this.renderer.setAnimationLoop(this.render.bind(this))
+    this.render.bind(this)
 
 	}	
 
@@ -86,6 +85,8 @@ class App{
 
 
 	render() { 
+    requestAnimationFrame(this.resize)
+
     this.mesh.rotateX( 0.01 )
     this.mesh.rotateY( 0.005 );
     this.mesh.rotateZ( 0.0005 );
@@ -94,6 +95,8 @@ class App{
     if (this.arToolkitSource.ready === false) return
     this.arToolkitContext.update(this.arToolkitSource.domElement)
     this.controls.update()
+    
+    this.geometry.verticesNeedUpdate = true;
   }
 }
 

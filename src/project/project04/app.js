@@ -1,4 +1,9 @@
 import { OrbitControls } from '../../../libs/three/jsm/OrbitControls.js';
+import { GLTFLoader } from '../../../libs/three/jsm/GLTFLoader.js';
+// import { FBXLoader } from '../../../libs/three/jsm/FBXLoader.js';
+import { RGBELoader } from '../../../libs/three/jsm/RGBELoader.js';
+import { OrbitControls } from '../../../libs/three/jsm/OrbitControls.js';
+import { LoadingBar } from '../../../libs/LoadingBar.js';
 
 
 class App{
@@ -11,9 +16,9 @@ class App{
     this.renderer = new THREE.WebGLRenderer({antialias: true, alpha: true})
     this.renderer.setPixelRatio(window.devicePixelRatio)
     this.renderer.setSize(window.innerHeight, window.innerWidth)
-    this.renderer.domElement.style.position = 'absolute'
-    this.renderer.domElement.style.top = '0px'
-    this.renderer.domElement.style.left = '0px'
+    this.renderer.outputEncoding = THREE.sRGBEncoding;
+    this.renderer.physicallyCorrectLights = true;
+
     container.appendChild(this.renderer.domElement)
 
     // camera : 시야각, 캔버스(랜더러)배율, 랜더링 공간설정 (원근 카메라 셋팅.)
@@ -58,18 +63,16 @@ class App{
 
     /**
      * add an object in the scene */
-    const geometry = new THREE.TorusKnotGeometry(0.3, 0.1, 64, 16)
-    const material = new THREE.MeshNormalMaterial()
-    this.mesh = new THREE.Mesh(geometry, material)
-    this.mesh.position.y = 1
-    this.scene.add(this.mesh)
+    this.setEnvironment();
+    this.loadingBar = new LoadingBar();    
+    this.loadGLTF();
 
     this.controls = new OrbitControls( this.camera, this.renderer.domElement );
     this.controls.update()
 
     /**
      * render the whole thing on the page */
-    this.render.bind(this)
+    this.renderer.setAnimationLoop(this.render.bind(this))
 
 	}	
 
@@ -86,8 +89,6 @@ class App{
 
 
 	render() { 
-    this.requestAnimationFrame(this.render)
-    
     this.mesh.rotateX( 0.01 )
     this.mesh.rotateY( 0.005 );
     this.mesh.rotateZ( 0.0005 );
@@ -96,6 +97,43 @@ class App{
     if (this.arToolkitSource.ready === false) return
     this.arToolkitContext.update(this.arToolkitSource.domElement)
     this.controls.update()
+  }
+
+
+  setEnvironment(){
+    const loader = new RGBELoader().setDataType( THREE.UnsignedByteType );
+    const pmremGenerator = new THREE.PMREMGenerator( this.renderer );
+    pmremGenerator.compileEquirectangularShader();
+    
+    loader.load('../../assets/hdr/venice_sunset_1k.hdr', ( texture ) => {
+      const envMap = pmremGenerator.fromEquirectangular( texture ).texture;
+      pmremGenerator.dispose();
+      this.scene.environment = envMap;
+    },
+    undefined,
+    (err)=>{console.error( 'An error occurred setting the environment');});
+  }
+
+
+  loadGLTF(){
+    const loader = new GLTFLoader( ).setPath('../../assets/');
+
+    // Load a glTF resource
+    loader.load('office-chair.glb', ( gltf ) => {
+        const bbox = new THREE.Box3().setFromObject( gltf.scene );
+        console.log(`min:${bbox.min.x.toFixed(2)},${bbox.min.y.toFixed(2)},${bbox.min.z.toFixed(2)} -  max:${bbox.max.x.toFixed(2)},${bbox.max.y.toFixed(2)},${bbox.max.z.toFixed(2)}`);
+        
+        gltf.scene.traverse( ( child ) => {if (child.isMesh){child.material.metalness = 0.2;}})
+        this.chair = gltf.scene;  
+        this.scene.add( gltf.scene );     
+        this.loadingBar.visible = false;
+        this.renderer.setAnimationLoop( this.render.bind(this));
+      },
+
+      // called while loading is progressing
+      function ( xhr ) { self.loadingBar.progress = (xhr.loaded / xhr.total); },
+      function ( error ) { console.log( 'An error happened' ); }  
+    );
   }
 }
 
