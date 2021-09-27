@@ -1,48 +1,63 @@
-var colors = [0x05A8AA, 0xB8D5B8, 0xD7B49E, 0xDC602E, 0xBC412B, 0xF19C79, 0xCBDFBD, 0xF6F4D2, 0xD4E09B, 0xFFA8A9, 0xF786AA, 0xA14A76, 0xBC412B, 0x63A375, 0xD57A66, 0x731A33, 0xCBD2DC, 0xDBD48E, 0x5E5E5E, 0xDE89BE];
+import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js'
 
+import { OrbitControls } from 'https://threejsfundamentals.org/threejs/resources/threejs/r132/examples/jsm/controls/OrbitControls.js'
+import { OBJLoader } from 'https://threejsfundamentals.org/threejs/resources/threejs/r132/examples/jsm/loaders/OBJLoader.js'
+import { MTLLoader } from 'https://threejsfundamentals.org/threejs/resources/threejs/r132/examples/jsm/loaders/MTLLoader.js'
 
-
-class App{
-	constructor(){
+class App {
+  constructor() {
     /**
-     * Three.js 환경 생성 */ 
-    // renderer : 나의 데이터를 실제로 그려주는 역할( 3d printer )
-    const container = document.createElement( 'div' );
-    document.body.appendChild( container );
-    this.renderer = new THREE.WebGLRenderer({antialias: true, alpha: true})
+     * Three.js 환경 생성 */
+
+    // renderer : 나의 데이터를 실제로 그려주는 역할
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
     this.renderer.setPixelRatio(window.devicePixelRatio)
     this.renderer.setSize(window.innerHeight, window.innerWidth)
-    this.renderer.outputEncoding = THREE.sRGBEncoding;
-    this.renderer.physicallyCorrectLights = true;
-
+    this.renderer.domElement.style.position = 'absolute'
+    this.renderer.domElement.style.top = '0px'
+    this.renderer.domElement.style.left = '0px'
     container.appendChild(this.renderer.domElement)
 
-    // camera : 시야각, 캔버스(랜더러)배율, 랜더링 공간설정 (원근 카메라 셋팅.)
-    this.camera = new THREE.Camera()
+    // camera : 시야각, 캔버스배율, 랜더링 공간설정
+    const fov = 45;
+    const aspect = 2;  // the canvas default
+    const near = 0.1;
+    const far = 100;
+    this.camera = new THREE.PerspectiveCamera(fov, aspect, near, far);;
 
     // scene : 최상위 노드(객체)로서 배경색 안개등을 트리안의 모든 방향성은 scene으로 부터 결정된다.
-    this.scene = new THREE.Scene() 
+    this.scene = new THREE.Scene()
+    this.scene.add(this.camera)
 
 
-    
 
     /**
-     * arToolkit plugin for three.js (main part of ar.js) */ 
-    // arToolkitSource :위치를 추적하고 분석된 이미지. 현재는 카메라에 비춰진 모습 
-    this.arToolkitSource = new THREEx.ArToolkitSource({ sourceType: 'webcam'})
-    this.arToolkitSource.init(() => { setTimeout(() => { this.resize() }, 500) })
+     * arToolkit plugin for three.js (main part of ar.js) */
 
+    // arToolkitSource :위치를 추적하고 분석된 이미지. 현재는 카메라에 비춰진 모습
+    this.arToolkitSource = new THREEx.ArToolkitSource({
+      sourceType: 'webcam',
+    })
+    this.arToolkitSource.init(() => {
+      setTimeout(() => {
+        this.resize()
+      }, 500)
+    })
 
-    // arToolkitContext : 이미지(arToolkitSource)안에 있는 마커를 찾는 메인엔진 */ 
+    // arToolkitContext : 이미지(arToolkitSource)안에 있는 마커를 찾는 메인엔진 */
     this.arToolkitContext = new THREEx.ArToolkitContext({
-      cameraParametersUrl: THREEx.ArToolkitContext.baseURL + '../../../data/camera_para.dat',
+      cameraParametersUrl:
+        THREEx.ArToolkitContext.baseURL + '../../../data/camera_para.dat',
       detectionMode: 'mono',
     })
     this.arToolkitContext.init(() => {
       // copy projection matrix to camera
-      this.camera.projectionMatrix.copy(this.arToolkitContext.getProjectionMatrix())
+      this.camera.projectionMatrix.copy(
+        this.arToolkitContext.getProjectionMatrix(),
+      )
     })
-
 
     // arToolkitControl :카메라와 마커의 포지션을 조정하거나 마커위에 컨텐츠를 고정
     this.markerControls = new THREEx.ArMarkerControls(
@@ -50,54 +65,67 @@ class App{
       this.camera,
       {
         type: 'pattern',
-        patternUrl: THREEx.ArToolkitContext.baseURL + '../../../data/marker/patt.hiro',
+        patternUrl:
+          THREEx.ArToolkitContext.baseURL + '../../../data/marker/patt.hiro',
         // as we controls the camera, set changeMatrixMode: 'cameraTransformMatrix'
         changeMatrixMode: 'cameraTransformMatrix',
       },
     )
-    
-    
-    //--------------------------------------------------------------------------------------------------------------------
-    
+
+    /**
+     * add an object in the scene */
+    this.controls = new OrbitControls(this.camera, this.renderer.domElement)
+    this.controls.update()
+    {
+      const mtlLoader = new MTLLoader()
+      mtlLoader.load(
+        'https://threejsfundamentals.org/threejs/resources/models/windmill/windmill.mtl',
+        (mtl) => {
+          mtl.preload()
+          const objLoader = new OBJLoader()
+          objLoader.setMaterials(mtl)
+          objLoader.load(
+            'https://threejsfundamentals.org/threejs/resources/models/windmill/windmill.obj',
+            (root) => {
+              root.scale.set(0.1, 0.1, 0.1)
+              root.rotateX(30)
+              this.scene.add(root)
+            },
+          )
+        },
+      )
+    }
 
 
 
-    
-    //--------------------------------------------------------------------------------------------------------------------
-    
-    
     /**
      * render the whole thing on the page */
-    this.render.bind(this)
+    this.renderer.setAnimationLoop(this.render.bind(this))
 
-	}	
-
-
+    window.addEventListener('resize', this.resize.bind(this))
+  }
 
   resize() {
     this.arToolkitSource.onResizeElement()
     this.arToolkitSource.copyElementSizeTo(this.renderer.domElement)
     if (this.arToolkitContext.arController !== null) {
-      this.arToolkitSource.copyElementSizeTo(this.arToolkitContext.arController.canvas,)
+      this.arToolkitSource.copyElementSizeTo(
+        this.arToolkitContext.arController.canvas,
+      )
     }
   }
 
-
-
-	render() { 
-    requestAnimationFrame(this.resize)
-
-    this.mesh.rotateX( 0.01 )
-    this.mesh.rotateY( 0.005 );
-    this.mesh.rotateZ( 0.0005 );
+  render() {
     this.renderer.render(this.scene, this.camera)
-    
+
     if (this.arToolkitSource.ready === false) return
+    // 엔진이 계속 이미지영역을 계속 감지해야함.
     this.arToolkitContext.update(this.arToolkitSource.domElement)
+    // update scene.visible if the marker is seen
     this.controls.update()
-    
-    this.geometry.verticesNeedUpdate = true;
   }
+
+
 }
 
-export { App };
+export { App }
