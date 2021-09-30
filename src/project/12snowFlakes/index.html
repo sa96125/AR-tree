@@ -12,6 +12,7 @@
 
     <!-- include three.js library -->
     <script src="../../vendor/threejs/build/three.js"></script>
+    <script src="../../vendor/threejs/stats.min.js"></script>
 
     <!-- include jsartookit -->
     <script src="../../vendor/jsartoolkit5/build/artoolkit.min.js"></script>
@@ -35,12 +36,12 @@
 
     <script>
 
-      let camera, scene, renderer
+      let camera, scene, renderer, stats
 
       let arToolkitSource, arToolkitContext, smoothedControls
 
       let rootMarker, cube
-  
+
 
       init()
       createThreeContents()
@@ -66,6 +67,7 @@
 
         scene = new THREE.Scene()
         scene.add(camera)
+
 
         document.body.appendChild(renderer.domElement)
         window.addEventListener('resize', () => resize());
@@ -98,41 +100,78 @@
 
       function createThreeContents() {
 
-        const color = 0xFFFFFF;
+        //////////////////////////////////////////////////////////////////////////////////
+        //		light
+        //////////////////////////////////////////////////////////////////////////////////
+        let ambient = new THREE.AmbientLight( 0x666666 );
+        scene.add( ambient );
 
-        {
-          const intensity = 1;
-          const light = new THREE.DirectionalLight(color, intensity);
-          light.position.set(0, 10, 0);
-          rootMarker.add(light);
+        let directionalLight = new THREE.DirectionalLight( 0x887766 );
+        directionalLight.position.set( -1, 1, 1 ).normalize();
+        scene.add( directionalLight );
+
+
+        //////////////////////////////////////////////////////////////////////////////////
+        //		mesh
+        //////////////////////////////////////////////////////////////////////////////////
+        const geometry = new THREE.BufferGeometry();
+        const vertices = [];
+
+        const textureLoader = new THREE.TextureLoader();
+
+        const sprite1 = textureLoader.load( '../../public/textures/sprites/snowflake1.png' );
+        const sprite2 = textureLoader.load( '../../public/textures/sprites/snowflake2.png' );
+        const sprite3 = textureLoader.load( '../../public/textures/sprites/snowflake3.png' );
+        const sprite4 = textureLoader.load( '../../public/textures/sprites/snowflake4.png' );
+        const sprite5 = textureLoader.load( '../../public/textures/sprites/snowflake5.png' );
+
+        for ( let i = 0; i < 10000; i ++ ) {
+
+          const x = Math.random() * 2000 - 1000;
+          const y = Math.random() * 2000 - 1000;
+          const z = Math.random() * 2000 - 1000;
+
+          vertices.push( x, y, z );
+
         }
 
-        {
-          const length = 3, width = 4;
+        geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( vertices, 3 ) );
 
-          const shape = new THREE.Shape();
-          shape.moveTo( 0,0 );
-          shape.lineTo( 0, width );
-          shape.lineTo( length, width );
-          shape.lineTo( length, 0 );
-          shape.lineTo( 0, 0 );
+        parameters = [
+          [[ 1.0, 0.2, 0.5 ], sprite2, 20 ],
+          [[ 0.95, 0.1, 0.5 ], sprite3, 15 ],
+          [[ 0.90, 0.05, 0.5 ], sprite1, 10 ],
+          [[ 0.85, 0, 0.5 ], sprite5, 8 ],
+          [[ 0.80, 0, 0.5 ], sprite4, 5 ]
+        ];
 
-          const extrudeSettings = {
-            steps: 1,
-            depth: 2,
-            bevelEnabled: true,
-            bevelThickness: 2,
-            bevelSize: 2,
-            bevelOffset: 5,
-            bevelSegments: 1
-          };
+        for ( let i = 0; i < parameters.length; i ++ ) {
 
-          const geometry = new THREE.ExtrudeGeometry( shape, extrudeSettings );
-          const material = new THREE.MeshBasicMaterial( { color } );
-          const menu = new THREE.Mesh( geometry, material ) ;
-          rootMarker.add( menu );
+          const color  = parameters[ i ][ 0 ];
+          const sprite = parameters[ i ][ 1 ];
+          const size   = parameters[ i ][ 2 ];
+
+          materials[ i ] = new THREE.PointsMaterial( { size: size, map: sprite, blending: THREE.AdditiveBlending, depthTest: false, transparent: true } );
+          materials[ i ].color.setHSL( color[ 0 ], color[ 1 ], color[ 2 ] );
+
+          const particles = new THREE.Points( geometry, materials[ i ] );
+
+          particles.rotation.x = Math.random() * 6;
+          particles.rotation.y = Math.random() * 6;
+          particles.rotation.z = Math.random() * 6;
+
+          scene.add( particles );
+
         }
-      
+
+
+        //////////////////////////////////////////////////////////////////////////////////
+        //		stats
+        //////////////////////////////////////////////////////////////////////////////////
+        stats = new Stats();
+				document.body.appendChild( stats.dom );
+
+
       }
 
 
@@ -148,6 +187,8 @@
       function update() {
 
         arToolkitSource.ready && arToolkitContext.update( arToolkitSource.domElement );
+
+        stats.update();
 
       }
 
