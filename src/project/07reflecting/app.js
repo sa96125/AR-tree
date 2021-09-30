@@ -1,4 +1,5 @@
 import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js'
+import { threeFresnelShader } from '../../js/shaders/FresnelShader.js'
 
 class App{
 	constructor(){
@@ -25,6 +26,7 @@ class App{
     document.body.appendChild( container );
     this.renderer = new THREE.WebGLRenderer({antialias: true, alpha: true})
     this.renderer.setPixelRatio(window.devicePixelRatio)
+    this.renderer.outputEncoding = THREE.sRGBEncoding;
     this.renderer.setSize(window.innerHeight, window.innerWidth)
     this.renderer.domElement.style.position = 'absolute'
     this.renderer.domElement.style.top = '0px'
@@ -37,6 +39,7 @@ class App{
     // scene : 최상위 노드(객체)로서 배경색 안개등을 트리안의 모든 방향성은 scene으로 부터 결정된다.
     this.scene = new THREE.Scene() 
     this.scene.add(this.camera)
+    
   }
 
 
@@ -50,31 +53,8 @@ class App{
 
     // ##### arToolkitContext : 이미지(arToolkitSource)안에 있는 마커를 찾는 메인엔진 */ 
     this.arToolkitContext = new THREEx.ArToolkitContext({
-      // debug - true if one should display artoolkit debug canvas, false otherwise
-      debug: false,
-      // the mode of detection - ['color', 'color_and_matrix', 'mono', 'mono_and_matrix']
-      detectionMode: 'mono',
-      // type of matrix code - valid iif detectionMode end with 'matrix' - [3x3, 3x3_HAMMING63, 3x3_PARITY65, 4x4, 4x4_BCH_13_9_3, 4x4_BCH_13_5_5]
-      matrixCodeType: '3x3',
-      // Pattern ratio for custom markers
-      patternRatio: 0.5, 
-      // Labeling mode for markers - ['black_region', 'white_region']
-      // black_region: Black bordered markers on a white background, white_region: White bordered markers on a black background
-      labelingMode: 'black_region',
-      
-      // url of the camera parameters
       cameraParametersUrl: THREEx.ArToolkitContext.baseURL + '../../../data/camera_para.dat',
-
-      // tune the maximum rate of pose detection in the source image
-      maxDetectionRate: 60,
-      // resolution of at which we detect pose in the source image
-      canvasWidth: 640,
-      canvasHeight: 480,
-      
-      // enable image smoothing or not for canvas copy - default to true
-      // https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/imageSmoothingEnabled
-      imageSmoothingEnabled : true,
-
+      detectionMode: 'mono',
     })
 
     this.arToolkitContext.init(() => {
@@ -100,28 +80,48 @@ class App{
   /**
    * add an object in the scene */
   createContent() {
+    const ambientLight = new THREE.AmbientLight(0xd87e88)
+    this.markerRoot.add(ambientLight)
 
-    const geometry = new THREE.SphereGeometry(1, 32,32);
-    let loader = new THREE.TextureLoader();
-    let texture = loader.load( '../../public/images/earth-sphere.jpg', this.render.bind(this) );
-    let material = new THREE.MeshLambertMaterial( { map: texture, opacity: 0.5 } );
+    const light1 = new THREE.PointLight()
+    light1.position.set(10, 10, 10)
+    light1.castShadow = true
+    light1.shadow.bias = -0.0002
+    light1.shadow.mapSize.height = 1024
+    light1.shadow.mapSize.width = 1024
+    this.markerRoot.add(light1)
+
+    let cubeRenderTarget = new THREE.WebGLCubeRenderTarget( 128, {
+      format: THREE.RGBFormat,
+      generateMipmaps: true,
+      minFilter: THREE.LinearMipmapLinearFilter,
+    } );
+
+    this.cubeCamera = new THREE.CubeCamera( 0.1, 10, cubeRenderTarget );
+    this.markerRoot.add(this.cubeCamera)
+  
+    const material = new THREE.MeshPhongMaterial({
+      shininess: 100,
+      color: 0xffffff,
+      specular: 0xffaa00,
+      reflectivity: .2,
+      envMap: cubeRenderTarget.texture
+    })
+
+
+    const geometry = new THREE.TorusGeometry( 10, 2.9, 4, 100 )
+
 
     this.mesh = new THREE.Mesh(geometry, material)
-    this.mesh.position.y = 0.5
+    this.mesh.position.y = .5
+    this.mesh.scale.set(0.1,0.1,0.1)
+
     this.markerRoot.add(this.mesh)
 
+    this.mesh.visible = false;
+    this.cubeCamera.position.copy( this.mesh.position );
+    this.cubeCamera.update( this.renderer, this.markerRoot );
 
-    let pointLight = new THREE.PointLight( 0xffffff, 1, 100 );
-    pointLight.position.set(10,10,2);
-    // create a mesh to help visualize the position of the light
-    pointLight.add( 
-      new THREE.Mesh( 
-        new THREE.SphereBufferGeometry( 0.05, 16,8 ), 
-        new THREE.MeshBasicMaterial({ color: 0xffffff, opacity: 0.5 }) 
-      ) 
-    );
-
-    this.markerRoot.add(pointLight)
   }
 
 
@@ -131,6 +131,12 @@ class App{
     this.arToolkitContext.update(this.arToolkitSource.domElement)
     // update scene.visible if the marker is seen
     this.scene.visible = this.camera.visible
+
+    this.mesh.rotateX( 0.003 )
+    this.mesh.rotateY( 0.003 )
+    this.mesh.rotateZ( 0.003 )
+
+    this.mesh.visible = true
     this.renderer.render(this.scene, this.camera)
   }
 

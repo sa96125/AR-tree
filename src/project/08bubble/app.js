@@ -1,4 +1,5 @@
 import * as THREE from 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js'
+import { threeFresnelShader } from '../../js/shaders/FresnelShader.js'
 
 class App{
 	constructor(){
@@ -25,6 +26,7 @@ class App{
     document.body.appendChild( container );
     this.renderer = new THREE.WebGLRenderer({antialias: true, alpha: true})
     this.renderer.setPixelRatio(window.devicePixelRatio)
+    this.renderer.outputEncoding = THREE.sRGBEncoding;
     this.renderer.setSize(window.innerHeight, window.innerWidth)
     this.renderer.domElement.style.position = 'absolute'
     this.renderer.domElement.style.top = '0px'
@@ -38,8 +40,8 @@ class App{
     this.scene = new THREE.Scene() 
     this.scene.add(this.camera)
 
-    this.ambientLight = new THREE.AmbientLight( 0xcccccc, 0.5 );
-    this.scene.add(this.ambientLight);
+
+    
   }
 
 
@@ -80,28 +82,35 @@ class App{
   /**
    * add an object in the scene */
   createContent() {
+    let loader = new THREE.TextureLoader();
+
+    let videoTexture = new THREE.VideoTexture( this.arToolkitSource.domElement );
+    videoTexture.minFilter = THREE.LinearFilter;
+
+
+  
+    let fShader = threeFresnelShader;
+
+    var material = new THREE.ShaderMaterial( 
+      {
+        uniforms:{
+          texture: { value: videoTexture },
+          refractionRatio: { value: 0.75 },
+          distance: { value: 1.0 },
+          opacity: { value: 1 },
+          tint: { value: new THREE.Vector3(0.8, 0.8, 1.0) }
+        },
+        vertexShader: document.getElementById( 'vertexShader' ).textContent,
+        fragmentShader: document.getElementById( 'fragmentShader' ).textContent,
+        transparent: true
+      });
 
     const geometry = new THREE.SphereGeometry(1, 32,32);
-    let loader = new THREE.TextureLoader();
-    let texture = loader.load( '../../public/images/earth-sphere.jpg', this.render.bind(this) );
-    let material = new THREE.MeshLambertMaterial( { map: texture, opacity: 0.5 } );
+
 
     this.mesh = new THREE.Mesh(geometry, material)
-    this.mesh.position.y = 0.5
     this.markerRoot.add(this.mesh)
 
-
-    let pointLight = new THREE.PointLight( 0xffffff, 1, 100 );
-    pointLight.position.set(10,10,2);
-    // create a mesh to help visualize the position of the light
-    pointLight.add( 
-      new THREE.Mesh( 
-        new THREE.SphereBufferGeometry( 0.05, 16,8 ), 
-        new THREE.MeshBasicMaterial({ color: 0xffffff, opacity: 0.5 }) 
-      ) 
-    );
-
-    this.markerRoot.add(pointLight)
   }
 
 
@@ -111,7 +120,11 @@ class App{
     this.arToolkitContext.update(this.arToolkitSource.domElement)
     // update scene.visible if the marker is seen
     this.scene.visible = this.camera.visible
+
+    this.mesh.rotation.y -= 0.01;
     this.renderer.render(this.scene, this.camera)
+    // 
+
   }
 
 

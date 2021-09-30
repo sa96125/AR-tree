@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>1.1 version</title>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"
+    />
+    <link rel="shortcut icon" href="#" />
+    <link type="text/css" rel="stylesheet" href="./main.css" />
+
+    <!-- include three.js library -->
+    <script src="../../vendor/threejs/build/three.js"></script>
+
+    <!-- include jsartookit -->
+    <script src="../../vendor/jsartoolkit5/build/artoolkit.min.js"></script>
+    <script src="../../vendor/jsartoolkit5/js/artoolkit.api.js"></script>
+
+    <!-- include threex.artoolkit -->
+    <script src="../../vendor/threex/threex-artoolkitsource.js"></script>
+    <script src="../../vendor/threex/threex-artoolkitcontext.js"></script>
+    <script src="../../vendor/threex/threex-arbasecontrols.js"></script>
+    <script src="../../vendor/threex/threex-armarkercontrols.js"></script>
+    <script src="../../vendor/threex/threex-arsmoothedcontrols.js"></script>
+  </head>
+
+  <body>
+
+
+    <div id="overlay">
+      <button id="startButton">노크 증강현실 인터페이스</button>
+    </div>
+
+
+    <script>
+
+
+
+      let camera, scene, renderer, rootMarker
+
+      let arToolkitSource, arToolkitContext, smoothedControls
+
+      let cube
+  
+
+      init()
+      createThreeContents()
+      animate()
+
+
+
+      function init() {
+
+        setThreeElements()
+        setArElements()
+
+      }
+
+
+      function setThreeElements() {
+
+        camera = new THREE.Camera()
+        
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+        renderer.setPixelRatio(window.devicePixelRatio)
+        renderer.setSize(window.innerWidth, window.innerHeight)
+
+        scene = new THREE.Scene()
+        scene.add(camera)
+
+        // scene.visible = false
+
+
+        document.body.appendChild(renderer.domElement)
+        window.addEventListener('resize', () => resize());
+
+      }
+
+
+      function setArElements() {
+
+        // ##### arToolkitSource :위치를 추적하고 분석된 이미지. 현재는 카메라에 비춰진 모습
+        arToolkitSource = new THREEx.ArToolkitSource({ sourceType: 'webcam' })
+        arToolkitSource.init(() => resize())
+
+        // ##### arToolkitContext : 이미지(arToolkitSource)안에 있는 마커를 찾는 메인엔진 */
+        arToolkitContext = new THREEx.ArToolkitContext({ cameraParametersUrl: '../../../data/camera_para.dat', detectionMode: 'mono'})
+        arToolkitContext.init(() => camera.projectionMatrix.copy(arToolkitContext.getProjectionMatrix()))
+
+
+        rootMarker = new THREE.Group()
+        scene.add(rootMarker)
+        
+
+        // ##### arToolkitControl :카메라와 마커의 포지션을 조정하거나 마커위에 컨텐츠를 고정
+        markerControls = new THREEx.ArMarkerControls(
+          arToolkitContext, rootMarker, { type: 'pattern', patternUrl: '../../../data/marker/patt.hiro',}
+        )
+
+      }
+
+
+      function createThreeContents() {
+
+        const color = 0xFFFFFF;
+
+        {
+          const intensity = 1;
+          const light = new THREE.DirectionalLight(color, intensity);
+          light.position.set(0, 10, 0);
+          rootMarker.add(light);
+        }
+
+        {
+          const length = 3, width = 4;
+
+          const shape = new THREE.Shape();
+          shape.moveTo( 0,0 );
+          shape.lineTo( 0, width );
+          shape.lineTo( length, width );
+          shape.lineTo( length, 0 );
+          shape.lineTo( 0, 0 );
+
+          const extrudeSettings = {
+            steps: 1,
+            depth: 2,
+            bevelEnabled: true,
+            bevelThickness: 2,
+            bevelSize: 2,
+            bevelOffset: 5,
+            bevelSegments: 1
+          };
+
+          const geometry = new THREE.ExtrudeGeometry( shape, extrudeSettings );
+          const material = new THREE.MeshBasicMaterial( { color } );
+          const menu = new THREE.Mesh( geometry, material ) ;
+          rootMarker.add( menu );
+        }
+      
+      }
+
+
+      function animate() {
+
+        render()
+
+      }
+
+
+      function render(time) {
+        arToolkitSource.ready && arToolkitContext.update( arToolkitSource.domElement );
+        
+        /**
+         * content update here
+         */
+
+        
+        renderer.render(scene, camera)
+        requestAnimationFrame(render);
+      }
+
+
+      function resize() {
+
+        arToolkitSource.onResizeElement()
+        arToolkitSource.copyElementSizeTo(renderer.domElement)
+        if (arToolkitContext.arController !== null) {
+          arToolkitSource.copyElementSizeTo(arToolkitContext.arController.canvas)
+        }
+
+      }
+
+
+    </script>
+  </body>
+</html>
