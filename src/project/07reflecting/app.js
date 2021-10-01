@@ -84,18 +84,19 @@ class App{
     this.markerRoot.add(ambientLight)
 
     const light1 = new THREE.PointLight()
-    light1.position.set(10, 10, 10)
+    light1.position.set(0, 0, 0)
     light1.castShadow = true
     light1.shadow.bias = -0.0002
     light1.shadow.mapSize.height = 1024
     light1.shadow.mapSize.width = 1024
-    this.markerRoot.add(light1)
+    this.scene.add(light1)
 
     let cubeRenderTarget = new THREE.WebGLCubeRenderTarget( 128, {
       format: THREE.RGBFormat,
       generateMipmaps: true,
       minFilter: THREE.LinearMipmapLinearFilter,
     } );
+
 
     this.cubeCamera = new THREE.CubeCamera( 0.1, 10, cubeRenderTarget );
     this.markerRoot.add(this.cubeCamera)
@@ -115,6 +116,14 @@ class App{
     this.mesh = new THREE.Mesh(geometry, material)
     this.mesh.position.y = .5
     this.mesh.scale.set(0.1,0.1,0.1)
+    this.mesh.rotation.x = -Math.PI/2;
+
+
+    const axes = new THREE.AxesHelper();
+    axes.material.depthTest = false;
+    axes.renderOrder = 1;
+
+    this.markerRoot.add(axes)
 
     this.markerRoot.add(this.mesh)
 
@@ -132,9 +141,6 @@ class App{
     // update scene.visible if the marker is seen
     this.scene.visible = this.camera.visible
 
-    this.mesh.rotateX( 0.003 )
-    this.mesh.rotateY( 0.003 )
-    this.mesh.rotateZ( 0.003 )
 
     this.mesh.visible = true
     this.renderer.render(this.scene, this.camera)
