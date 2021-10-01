@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -42,6 +43,9 @@
 
       let rootMarker, cube
 
+      const materials = [];
+
+
 
       init()
       createThreeContents()
@@ -68,7 +72,6 @@
         scene = new THREE.Scene()
         scene.add(camera)
 
-
         document.body.appendChild(renderer.domElement)
         window.addEventListener('resize', () => resize());
 
@@ -92,23 +95,28 @@
 
         // ##### arToolkitControl :카메라와 마커의 포지션을 조정하거나 마커위에 컨텐츠를 고정
         markerControls = new THREEx.ArMarkerControls(
-          arToolkitContext, rootMarker, { type: 'pattern', patternUrl: '../../../data/marker/patt.hiro',}
+          arToolkitContext, camera, { type: 'pattern', patternUrl: '../../../data/marker/patt.hiro',}
         )
 
       }
 
 
       function createThreeContents() {
+        scene.visible = false
+        scene.fog     = new THREE.FogExp2( 0x000000, .0008 );
+
 
         //////////////////////////////////////////////////////////////////////////////////
         //		light
         //////////////////////////////////////////////////////////////////////////////////
         let ambient = new THREE.AmbientLight( 0x666666 );
-        scene.add( ambient );
+        rootMarker.add( ambient );
 
         let directionalLight = new THREE.DirectionalLight( 0x887766 );
         directionalLight.position.set( -1, 1, 1 ).normalize();
-        scene.add( directionalLight );
+        rootMarker.add( directionalLight );
+
+
 
 
         //////////////////////////////////////////////////////////////////////////////////
@@ -119,11 +127,11 @@
 
         const textureLoader = new THREE.TextureLoader();
 
-        const sprite1 = textureLoader.load( '../../public/textures/sprites/snowflake1.png' );
-        const sprite2 = textureLoader.load( '../../public/textures/sprites/snowflake2.png' );
-        const sprite3 = textureLoader.load( '../../public/textures/sprites/snowflake3.png' );
-        const sprite4 = textureLoader.load( '../../public/textures/sprites/snowflake4.png' );
-        const sprite5 = textureLoader.load( '../../public/textures/sprites/snowflake5.png' );
+        const sprite1 = textureLoader.load( '../../public/textures/snowflask.png' );
+        const sprite2 = textureLoader.load( '../../public/textures/snowflask.png' );
+        const sprite3 = textureLoader.load( '../../public/textures/snowflask.png' );
+        const sprite4 = textureLoader.load( '../../public/textures/snowflask.png' );
+        const sprite5 = textureLoader.load( '../../public/textures/snowflask.png' );
 
         for ( let i = 0; i < 10000; i ++ ) {
 
@@ -135,14 +143,14 @@
 
         }
 
-        geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( vertices, 3 ) );
+        geometry.addAttribute( 'position', new THREE.Float32BufferAttribute( vertices, 3 ) );
 
         parameters = [
-          [[ 1.0, 0.2, 0.5 ], sprite2, 20 ],
-          [[ 0.95, 0.1, 0.5 ], sprite3, 15 ],
+          [[ 1.0, 0.2, 0.5 ],   sprite2, 20 ],
+          [[ 0.95, 0.1, 0.5 ],  sprite3, 15 ],
           [[ 0.90, 0.05, 0.5 ], sprite1, 10 ],
-          [[ 0.85, 0, 0.5 ], sprite5, 8 ],
-          [[ 0.80, 0, 0.5 ], sprite4, 5 ]
+          [[ 0.85, 0, 0.5 ],    sprite5, 8 ],
+          [[ 0.80, 0, 0.5 ],    sprite4, 5 ]
         ];
 
         for ( let i = 0; i < parameters.length; i ++ ) {
@@ -168,8 +176,8 @@
         //////////////////////////////////////////////////////////////////////////////////
         //		stats
         //////////////////////////////////////////////////////////////////////////////////
-        stats = new Stats();
-				document.body.appendChild( stats.dom );
+        // stats = new Stats();
+				// document.body.appendChild( stats.dom );
 
 
       }
@@ -178,32 +186,49 @@
       function animate() {
 
         requestAnimationFrame(animate);
-        update()
         render()
+        update()
+
+      }
+
+
+      function render() {
+        
+        const time = Date.now() * 0.00005;
+
+        
+        for ( let i = 0; i < scene.children.length; i ++ ) {
+
+          const object = scene.children[ i ];
+
+          if ( object instanceof THREE.Points ) {
+            object.rotation.y = time * ( i < 4 ? i + 1 : - ( i + 1 ) );
+          }
+
+        }
+
+
+        for ( let i = 0; i < materials.length; i ++ ) {
+
+          const color = parameters[ i ][ 0 ];
+
+          const h = ( 360 * ( color[ 0 ] + time ) % 360 ) / 360;
+          materials[ i ].color.setHSL( h, color[ 1 ], color[ 2 ] );
+
+        }
+
+        
+        renderer.render(scene, camera)
 
       }
 
 
       function update() {
 
-        arToolkitSource.ready && arToolkitContext.update( arToolkitSource.domElement );
-
-        stats.update();
-
-      }
-
-
-      function render(time) {
-        
-        time *= 0.001;
-
-        if (resizeRendererToDisplaySize(renderer)) {
-          const canvas = renderer.domElement;
-          camera.aspect = canvas.clientWidth / canvas.clientHeight;
-          camera.updateProjectionMatrix();
+        if (arToolkitSource.ready) {
+          arToolkitContext.update( arToolkitSource.domElement );
+          scene.visible = camera.visible
         }
-
-        renderer.render(scene, camera)
 
       }
 
@@ -212,23 +237,10 @@
 
         arToolkitSource.onResizeElement()
         
-        arToolkitContext.arController 
+
+        arToolkitContext.arController
           ? arToolkitSource.copyElementSizeTo(arToolkitContext.arController.canvas)
           : arToolkitSource.copyElementSizeTo(renderer.domElement)
-
-      }
-
-
-      function resizeRendererToDisplaySize(renderer) {
-
-        const canvas = renderer.domElement;
-        const width  = canvas.clientWidth;
-        const height = canvas.clientHeight;
-        const needResize = canvas.width !== width || canvas.height !== height;
-        if (needResize) {
-          renderer.setSize(width, height, false);
-        }
-        return needResize;
 
       }
 
