@@ -91,7 +91,7 @@ class App{
 
     let material = new THREE.MeshBasicMaterial( { map: texture } );
 
-    let geometry = new THREE.PlaneGeometry(2, 2, 4, 4);
+    let geometry = new THREE.PlaneGeometry(6, 4, 4, 4);
     let mesh = new THREE.Mesh( geometry, material );
     mesh.rotation.x = -Math.PI/2;
 

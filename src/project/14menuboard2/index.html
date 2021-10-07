@@ -45,7 +45,6 @@
 
 
 
-
       init()
       createThreeContents()
       animate()
@@ -124,7 +123,6 @@
         scene.add(rootMarker)
         scene.visible = false
 
-        rootMarker.position.y = .5
         rootMarker.rotation.x = -Math.PI/2;
 
         //////////////////////////////////////////////////////////////////////////////////
@@ -142,34 +140,75 @@
         //		mesh
         //////////////////////////////////////////////////////////////////////////////////
 
-        meshArea = new THREE.Object3D()
-        meshArea.scale.set(.3, .3, .1)
+        const meshArea = new THREE.Object3D()
+        meshArea.scale.set(.15, .15, 0)
+        meshArea.position.x = -.05
+        meshArea.position.y = -.1
         rootMarker.add(meshArea)
 
-        const length = 1, width = 2;
+        const imageArea = new THREE.Object3D()
+        imageArea.scale.set(1,1, 0)
+        imageArea.position.z = .07
+        rootMarker.add(imageArea)
 
-        const shape = new THREE.Shape();
-        shape.moveTo( 0,0 );
-        shape.lineTo( 0, width );
-        shape.lineTo( length, width );
-        shape.lineTo( length, 0 );
-        shape.lineTo( 0, 0 );
 
-        const extrudeSettings = {
-          steps: 1,
-          depth: 1,
-          bevelEnabled: true,
-          bevelThickness: 1,
-          bevelSize: 5,
-          bevelOffset: -1,
-          bevelSegments: 3
-        };
+        {
 
-        const geometry = new THREE.ExtrudeGeometry( shape, extrudeSettings );
-        const material = new THREE.MeshPhongMaterial( { color: 0xfff2cc } );
-        const mesh = new THREE.Mesh( geometry, material ) ;
+          const length = 1, width = 1;
 
-        meshArea.add(mesh)
+          const shape = new THREE.Shape();
+          shape.moveTo( 0,0 );
+          shape.lineTo( 0, width );
+          shape.lineTo( length/2, width );
+          shape.lineTo( length/2, 0 );
+          shape.lineTo( 0, 0 );
+
+          const extrudeSettings = {
+            steps: 1,
+            depth: 1,
+            bevelEnabled: true,
+            bevelThickness: 1,
+            bevelSize: 5,
+            bevelOffset: -1,
+            bevelSegments: 3
+          };
+
+
+          const geometry = new THREE.ExtrudeGeometry( shape, extrudeSettings );
+          const material = new THREE.MeshPhongMaterial( { color: 0xfff2cc } );
+          const mesh     = new THREE.Mesh( geometry, material ) ;
+          
+          meshArea.add(mesh)
+          
+        }
+
+
+        {
+
+          const loadManager = new THREE.LoadingManager();
+          const loader = new THREE.TextureLoader(loadManager);
+
+          const materials = [
+
+            new THREE.MeshBasicMaterial({map: loader.load('https://threejsfundamentals.org/threejs/resources/images/flower-1.jpg')}),
+            new THREE.MeshBasicMaterial({map: loader.load('https://threejsfundamentals.org/threejs/resources/images/flower-2.jpg')}),
+            new THREE.MeshBasicMaterial({map: loader.load('https://threejsfundamentals.org/threejs/resources/images/flower-3.jpg')}),
+            new THREE.MeshBasicMaterial({map: loader.load('https://threejsfundamentals.org/threejs/resources/images/flower-4.jpg')}),
+            new THREE.MeshBasicMaterial({map: loader.load('https://threejsfundamentals.org/threejs/resources/images/flower-5.jpg')}),
+            new THREE.MeshBasicMaterial({map: loader.load('https://threejsfundamentals.org/threejs/resources/images/flower-6.jpg')}),
+
+          ];
+
+          loadManager.onLoad = () => {
+
+            const geometry = new THREE.PlaneGeometry( 1, 1 );
+            const mesh     = new THREE.Mesh( geometry, materials[1] ) ;
+    
+            imageArea.add(mesh)
+
+          };
+
+        }
 
       }
 
@@ -207,6 +246,7 @@
         if (arToolkitContext.arController !== null) {
           arToolkitSource.copyElementSizeTo(arToolkitContext.arController.canvas,)
         }
+
       }
 
 
