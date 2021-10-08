@@ -49,15 +49,38 @@
 
       let canvas
 
+      let materialIndex = { count : 0}
+
+      let clock = new THREE.Clock();
+      let speed = 2; //units a second
+      let delta = 0;
+
+			const pointer = new THREE.Vector2();
+			const radius = 100;
+
+      const loadManager = new THREE.LoadingManager();
+      const loader = new THREE.TextureLoader(loadManager);
+
+      const images = [
+
+        new THREE.MeshBasicMaterial({map: loader.load('https://threejsfundamentals.org/threejs/resources/images/flower-1.jpg')}),
+        new THREE.MeshBasicMaterial({map: loader.load('https://threejsfundamentals.org/threejs/resources/images/flower-2.jpg')}),
+        new THREE.MeshBasicMaterial({map: loader.load('https://threejsfundamentals.org/threejs/resources/images/flower-3.jpg')}),
+        new THREE.MeshBasicMaterial({map: loader.load('https://threejsfundamentals.org/threejs/resources/images/flower-4.jpg')}),
+        new THREE.MeshBasicMaterial({map: loader.load('https://threejsfundamentals.org/threejs/resources/images/flower-5.jpg')}),
+        new THREE.MeshBasicMaterial({map: loader.load('https://threejsfundamentals.org/threejs/resources/images/flower-6.jpg')}),
+
+      ];
 
       
       class PickHelper {
         constructor() {
           this.raycaster = new THREE.Raycaster();
+          this.raycaster.params.Line.threshold = 3;
           this.pickedObject = null;
           this.pickedObjectSavedColor = 0;
         }
-        pick(normalizedPosition, scene, camera, time) {
+        pick(pointer, scene, camera, time) {
           // 이미 다른 물체를 피킹했다면 색을 복원합니다
           if (this.pickedObject) {
             this.pickedObject.material.emissive.setHex(this.pickedObjectSavedColor);
@@ -65,23 +88,26 @@
           }
       
           // 절두체 안에 광선을 쏩니다
-          this.raycaster.setFromCamera(normalizedPosition, camera);
+          this.raycaster.setFromCamera(pointer, camera);
+
+
           // 광선과 교차하는 물체들을 배열로 만듭니다
           const intersectedObjects = this.raycaster.intersectObjects(scene.children);
-          console.log(intersectedObjects)
+
           if (intersectedObjects.length) {
             // 첫 번째 물체가 제일 가까우므로 해당 물체를 고릅니다
             this.pickedObject = intersectedObjects[0].object;
+
             // 기존 색을 저장해둡니다
             this.pickedObjectSavedColor = this.pickedObject.material.emissive.getHex();
             // emissive 색을 빨강/노랑으로 빛나게 만듭니다
             this.pickedObject.material.emissive.setHex((time * 8) % 2 > 1 ? 0xFFFF00 : 0xFF0000);
+
           }
         }
       }
 
 
-      const pickPosition = {x: 0, y: 0};
       const pickHelper = new PickHelper();
       clearPickPosition();
 
@@ -104,13 +130,15 @@
 
       function setThreeElements() {
 
-        camera = new THREE.PerspectiveCamera(75, window.width / window.height, 1, 1000 )
-        
+        camera = new THREE.PerspectiveCamera(70, window.width / window.height, 1, 1000 )
+
         renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+        renderer.outputEncoding = THREE.sRGBEncoding;
         renderer.setPixelRatio(window.devicePixelRatio)
         renderer.setSize(window.innerWidth, window.innerHeight)
 
         scene = new THREE.Scene()
+        scene = new THREE.Scene();
         scene.add(camera)
 
         document.body.appendChild(renderer.domElement)
@@ -119,16 +147,17 @@
 
         // event block.
 
-
+        {
           window.addEventListener('resize', resize);
   
-          window.addEventListener('mousemove', setPickPosition);
+          window.addEventListener('click', setPickPosition);
           window.addEventListener('mouseout', clearPickPosition);
           window.addEventListener('mouseleave', clearPickPosition);
   
           window.addEventListener('touchstart', (event) => {
             event.preventDefault(); // 스크롤 이벤트 방지
             setPickPosition(event.touches[0]);
+
           }, { passive: false });
           
           window.addEventListener('touchmove', (event) => {
@@ -136,6 +165,7 @@
           });
           
           window.addEventListener('touchend', clearPickPosition);
+        }
 
 
       }
@@ -154,7 +184,7 @@
           debug: false,
           cameraParametersUrl: '../../../data/camera_para.dat', 
           detectionMode: 'mono_and_matrix',
-          maxDetectionRate: 40,
+          maxDetectionRate: 30,
           imageSmoothingEnabled : true,
         })
         arToolkitContext.init(() => camera.projectionMatrix.copy(arToolkitContext.getProjectionMatrix()))
@@ -163,10 +193,10 @@
         // ##### arToolkitControl :카메라와 마커의 포지션을 조정하거나 마커위에 컨텐츠를 고정
         markerControls = new THREEx.ArMarkerControls(
           arToolkitContext, 
-          camera, 
+          scene, 
           { 
             // size of the marker in meter
-            size : 2,
+            size : 5,
             // type of marker - ['pattern', 'barcode', 'unknown' ]
             type : 'pattern',
             // url of the pattern - IIF type='pattern'
@@ -174,7 +204,7 @@
             // value of the barcode - IIF type='barcode'
             barcodeValue : null,
             // change matrix mode - [modelViewMatrix, cameraTransformMatrix]
-            changeMatrixMode : 'cameraTransformMatrix',
+            changeMatrixMode : 'modelViewMatrix',
 
           }
         )
@@ -183,17 +213,33 @@
 
 
       function initScene() {
-        rootMarker = new THREE.Object3D()
-        scene.add(rootMarker)
-        scene.visible = true
 
+
+        rootMarker = new THREE.Object3D()
         rootMarker.rotation.x = -Math.PI/2;
+
+
+        scene.add(rootMarker)
+        // scene.visible = true
+
+
+        smoothedRoot = new THREE.Object3D()
+        scene.add(smoothedRoot)
+
+        smoothedControls = new THREEx.ArSmoothedControls(smoothedRoot, {
+          lerpPosition: .8,
+          lerpQuaternion: .8,
+          lerpScale: 0,
+          minVisibleDelay: 0,
+          minUnvisibleDelay: 0,
+        });
+
 
         //////////////////////////////////////////////////////////////////////////////////
         //		light
         //////////////////////////////////////////////////////////////////////////////////
         const ambient = new THREE.HemisphereLight( 0xFFFFFF, 0xbbbbbf, 0.3)
-        scene.add( ambient )
+        rootMarker.add( ambient )
 
         const color = 0xFFFFFF;
         const intensity = .4;
@@ -211,20 +257,20 @@
         meshArea.scale.set(.8, .7, .1)
         meshArea.position.x = -.05
 
-        rootMarker.add(meshArea)
+        smoothedRoot.add(meshArea)
 
         imageArea = new THREE.Object3D()
         imageArea.scale.set(5, 5, .5)
         imageArea.position.z = 1
-        rootMarker.add(imageArea)
+        smoothedRoot.add(imageArea)
 
         buttonArea = new THREE.Object3D()
-        buttonArea.scale.set(.05, .05, .05)
-        buttonArea.position.y = 2.5
-        buttonArea.position.z = 2
+        buttonArea.scale.set(.1, .1, .1)
+        buttonArea.position.y = -1
+        buttonArea.position.z = 10
 
         buttonArea.rotation.z = Math.PI;
-        rootMarker.add(buttonArea)
+        smoothedRoot.add(buttonArea)
 
 
 
@@ -251,7 +297,7 @@
 
 
           const geometry = new THREE.ExtrudeGeometry( shape, extrudeSettings );
-          const material = new THREE.MeshPhongMaterial( { color : 0xd9ead3, opacity:0.1} );
+          const material = new THREE.MeshPhongMaterial( { color : 0xd9ead3 } );
           const mesh     = new THREE.Mesh( geometry, material ) ;
           
           meshArea.add(mesh)
@@ -261,26 +307,11 @@
 
         {
 
-          const loadManager = new THREE.LoadingManager();
-          const loader = new THREE.TextureLoader(loadManager);
-
-          const materials = [
-
-            new THREE.MeshBasicMaterial({map: loader.load('https://threejsfundamentals.org/threejs/resources/images/flower-1.jpg')}),
-            new THREE.MeshBasicMaterial({map: loader.load('https://threejsfundamentals.org/threejs/resources/images/flower-2.jpg')}),
-            new THREE.MeshBasicMaterial({map: loader.load('https://threejsfundamentals.org/threejs/resources/images/flower-3.jpg')}),
-            new THREE.MeshBasicMaterial({map: loader.load('https://threejsfundamentals.org/threejs/resources/images/flower-4.jpg')}),
-            new THREE.MeshBasicMaterial({map: loader.load('https://threejsfundamentals.org/threejs/resources/images/flower-5.jpg')}),
-            new THREE.MeshBasicMaterial({map: loader.load('https://threejsfundamentals.org/threejs/resources/images/flower-6.jpg')}),
-
-          ];
-
           loadManager.onLoad = () => {
 
-            const geometry = new THREE.PlaneGeometry( 1, 1 );
-            const mesh     = new THREE.Mesh( geometry, materials[4] ) ;
-    
-            imageArea.add(mesh)
+          const geometry = new THREE.PlaneGeometry( 1, 1 );
+          const mesh     = new THREE.Mesh( geometry, images[materialIndex.count] ) ;
+          imageArea.add(mesh)
 
           };
 
@@ -325,6 +356,7 @@
       function animate() {
 
         requestAnimationFrame(animate);
+
         render()
         update()
 
@@ -343,9 +375,9 @@
       }
 
 
-      function render(time) {
+      function render() {
         
-        time *= 0.08;
+        delta = clock.getDelta()
 
         if (resizeRendererToDisplaySize(renderer)) {
           const canvas = renderer.domElement;
@@ -353,11 +385,13 @@
           camera.updateProjectionMatrix();
         }
 
-        buttonArea.rotation.y += 0.01
+				camera.lookAt( buttonArea.position );
 
-        camera.updateProjectionMatrix();
+        smoothedControls.update(rootMarker);
 
-        pickHelper.pick(pickPosition, scene, camera, time);
+        buttonArea.rotation.y += speed * delta
+
+        pickHelper.pick(pointer, buttonArea, camera, delta, imageArea, images, materialIndex);
 
         renderer.render(scene, camera)
         
@@ -370,6 +404,7 @@
 
           arToolkitContext.update( arToolkitSource.domElement );
           scene.visible = camera.visible
+
 
       }
 
@@ -400,10 +435,10 @@
       function setPickPosition(event) {
 
         const pos = getCanvasRelativePosition(event);
-        pickPosition.x = (pos.x / canvas.width ) *  2 - 1;
-        pickPosition.y = (pos.y / canvas.height) * -2 + 1;  // Y 축을 뒤집었음
+        pointer.x = (pos.x / canvas.width ) *  2 - 1;
+        pointer.y = (pos.y / canvas.height) * -2 + 1;  // Y 축을 뒤집었음
 
-        console.log(pickPosition.x, pickPosition.y)
+
 
       }
       
@@ -416,8 +451,8 @@
          * 떼면 피킹을 멈춰야 합니다. 지금은 일단 어떤 것도
          * 선택할 수 없는 값으로 지정해두었습니다
          **/
-        pickPosition.x = -100000;
-        pickPosition.y = -100000;
+        pointer.x = -100000;
+        pointer.y = -100000;
 
       }
 
