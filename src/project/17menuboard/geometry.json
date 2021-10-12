@@ -1,0 +1,16 @@
+{
+	"metadata": {
+		"version": 4.5,
+		"type": "BufferGeometry",
+		"generator": "BufferGeometry.toJSON"
+	},
+	"uuid": "7B0579E7-7A2C-4711-BD22-94D8103ADF3C",
+	"type": "SphereGeometry",
+	"radius": 1,
+	"widthSegments": 32,
+	"heightSegments": 12,
+	"phiStart": 0,
+	"phiLength": 6.283185307179586,
+	"thetaStart": 0,
+	"thetaLength": 3.141592653589793
+}
