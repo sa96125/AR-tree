@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>ar-three01</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"/>
+    <style>
+      html {height: 100%;width: 100%;overflow: hidden;}
+      body {margin: 0;padding: 0;height: 100%;width: 100%;}
+      div > canvas {height: 100%;width: 100%;}
+    </style>
+    <script src="../../../vendor/threejs/build/three.min.js"></script>
+    <script src="../../../vendor/arjs/build/ar.js"></script>
+    <script>THREEx.ArToolkitContext.baseURL = '../'</script>
+  </head>
+
+  <body>
+    <div></div>
+    <script type="module">
+      import { App } from './app.js';
+
+      document.addEventListener("DOMContentLoaded", function(){
+          const app = new App();
+          window.app = app;
+      });
+  </script>
+</body>

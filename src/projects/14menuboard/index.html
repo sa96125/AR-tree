@@ -1,0 +1,205 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>1.3 version</title>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"
+    />
+    <link rel="shortcut icon" href="#" />
+    <link type="text/css" rel="stylesheet" href="./main.css" />
+
+
+    <!-- include three.js library -->
+    <script src="../../vendor/threejs/build/three.js"></script>
+
+
+    <!-- include jsartookit -->
+    <script src="../../vendor/jsartoolkit5/build/artoolkit.min.js"></script>
+    <script src="../../vendor/jsartoolkit5/js/artoolkit.api.js"></script>
+
+    <!-- include threex.artoolkit -->
+    <script src="../../vendor/threex/threex-artoolkitsource.js"></script>
+    <script src="../../vendor/threex/threex-artoolkitcontext.js"></script>
+    <script src="../../vendor/threex/threex-arbasecontrols.js"></script>
+    <script src="../../vendor/threex/threex-armarkercontrols.js"></script>
+    <script src="../../vendor/threex/threex-arsmoothedcontrols.js"></script>
+  </head>
+
+  <body>
+
+
+    <div id="overlay">
+      <button id="startButton">노크 증강현실 인터페이스</button>
+    </div>
+
+    <script>
+
+      let camera, scene, renderer
+
+      let arToolkitSource, arToolkitContext, smoothedControls
+
+      let rootMarker
+
+
+      init()
+      createThreeContents()
+      animate()
+
+
+
+      function init() {
+
+        setThreeElements()
+        setArElements()
+
+      }
+
+
+      function setThreeElements() {
+
+        camera = new THREE.Camera()
+        
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+        renderer.setPixelRatio(window.devicePixelRatio)
+        renderer.setSize(window.innerWidth, window.innerHeight)
+        
+        scene = new THREE.Scene()
+
+
+        document.body.appendChild(renderer.domElement)
+        window.addEventListener('resize', () => resize());
+
+      }
+
+
+      function setArElements() {
+
+        
+        //////////////////////////////////////////////////////////////////////////////////
+        //		arToolkitSource :위치를 추적하고 분석된 이미지. 현재는 카메라에 비춰진 모습
+        //////////////////////////////////////////////////////////////////////////////////
+
+        arToolkitSource = new THREEx.ArToolkitSource({ 
+          sourceType: 'webcam',
+          sourceUrl : null,
+        })
+        arToolkitSource.init(() => {
+          resize()
+          // console.log(arToolkitContext.arController)
+          // if(arToolkitContext.arController !== null) {
+          //   arToolkitContext.arController.addEventListener('getMarker', function(event) {
+          //     console.log('marker pos: ', event.data.marker.pos);
+          //   });
+          // }
+        })
+          
+
+        //////////////////////////////////////////////////////////////////////////////////
+        //		arToolkitContext : 이미지(arToolkitSource)안에 있는 마커를 찾는 메인엔진
+        //////////////////////////////////////////////////////////////////////////////////
+
+        arToolkitContext = new THREEx.ArToolkitContext({ 
+
+          debug: false,
+          cameraParametersUrl: '../../../data/camera_para.dat', 
+          detectionMode: 'mono',
+          maxDetectionRate: 20,
+          imageSmoothingEnabled : true,
+        
+        })
+        arToolkitContext.init(() => camera.projectionMatrix.copy(arToolkitContext.getProjectionMatrix()))
+
+
+        rootMarker = new THREE.Object3D()
+        scene.add(rootMarker)
+        
+
+        //////////////////////////////////////////////////////////////////////////////////
+        //		arToolkitControl :카메라와 마커의 포지션을 조정하거나 마커위에 컨텐츠를 고정
+        //////////////////////////////////////////////////////////////////////////////////
+
+        markerControls = new THREEx.ArMarkerControls(
+          arToolkitContext, 
+          camera, 
+          { 
+            size : 1,
+            type : 'pattern',
+            patternUrl : '../../../data/marker/patt.hiro',
+            barcodeValue : null,
+            changeMatrixMode : 'modelViewMatrix',
+          }
+        )
+
+      }
+
+
+      function createThreeContents() {
+
+        scene.visible = false
+        // rootMarker.rotation.x = -Math.PI/2;
+
+        //////////////////////////////////////////////////////////////////////////////////
+        //		light
+        //////////////////////////////////////////////////////////////////////////////////
+        // let directionalLight = new THREE.DirectionalLight( 0x887766 );
+        // directionalLight.position.set(0, 5, 10).normalize();
+        // rootMarker.add( directionalLight );
+
+
+        //////////////////////////////////////////////////////////////////////////////////
+        //		mesh
+        //////////////////////////////////////////////////////////////////////////////////
+        const geometry = new THREE.BoxGeometry( 1, 1, 1 );
+        const material = new THREE.MeshBasicMaterial( {color: 0x00ff00} );
+        const cube = new THREE.Mesh( geometry, material );
+        rootMarker.add( cube );
+
+
+      }
+
+
+      function animate() {
+
+        requestAnimationFrame(animate);
+        render()
+        update()
+
+      }
+
+
+      function render() {
+        
+        const time = Date.now() * 0.00005;
+        
+        renderer.render(scene, camera)
+
+      }
+
+
+      function update() {
+
+        if (arToolkitSource.ready === false) return 
+
+        arToolkitContext.update( arToolkitSource.domElement );
+        scene.visible = camera.visible
+
+      }
+
+
+      function resize() {
+
+        arToolkitSource.onResizeElement()
+        
+        arToolkitContext.arController !== null
+          ? arToolkitSource.copyElementSizeTo(arToolkitContext.arController.canvas)
+          : arToolkitSource.copyElementSizeTo(renderer.domElement)
+
+      }
+
+
+    </script>
+  </body>
+</html>
